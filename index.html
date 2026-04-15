@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transformation Station</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f14;
+    --surface: #1a1a24;
+    --surface2: #22222f;
+    --border: #2e2e40;
+    --purple: #7c6ff7;
+    --purple-dim: #3d3878;
+    --teal: #2dd4bf;
+    --teal-dim: #134e4a;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --green: #4ade80;
+    --text: #e8e6ff;
+    --muted: #6b6a8a;
+    --grid-line: #1e1e2e;
+    --axis: #2e2e44;
+    --preimage: #7c6ff7;
+    --image: #2dd4bf;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .game-title {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+  }
+
+  .game-title span { color: var(--purple); }
+
+  .subtitle {
+    font-size: 0.9rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .stats-bar {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .stat-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .stat-value.purple { color: var(--purple); }
+  .stat-value.teal { color: var(--teal); }
+
+  .game-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 560px;
+  }
+
+  .round-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.75rem;
+  }
+
+  .question-text {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
+    min-height: 48px;
+  }
+
+  canvas {
+    display: block;
+    margin: 0 auto 1.25rem;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .legend {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 1rem;
+  }
+
+  .choice-btn {
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    padding: 14px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .choice-btn:hover:not(:disabled) {
+    border-color: var(--purple);
+    background: #1e1c30;
+    transform: translateY(-1px);
+  }
+
+  .choice-btn:active:not(:disabled) { transform: translateY(0); }
+
+  .choice-btn.correct {
+    background: #0f2d1a;
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .choice-btn.wrong {
+    background: #2d0f0f;
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  .choice-btn.reveal {
+    background: #0f2d1a;
+    border-color: var(--green);
+    color: var(--green);
+    opacity: 0.7;
+  }
+
+  .choice-btn:disabled { cursor: default; }
+
+  .feedback-area {
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .feedback-msg {
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .feedback-msg.show { opacity: 1; }
+  .feedback-msg.correct { color: var(--green); }
+  .feedback-msg.wrong { color: var(--red); }
+
+  .hint-text {
+    font-size: 0.82rem;
+    color: var(--muted);
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    line-height: 1.5;
+    max-width: 400px;
+  }
+
+  .hint-text.show { opacity: 1; }
+
+  .next-btn {
+    display: none;
+    margin: 1rem auto 0;
+    background: var(--purple-dim);
+    border: 1.5px solid var(--purple);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 12px 32px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: background 0.15s, transform 0.1s;
+  }
+
+  .next-btn:hover { background: var(--purple); transform: translateY(-1px); }
+  .next-btn:active { transform: translateY(0); }
+  .next-btn.visible { display: block; }
+
+  .progress-bar {
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-bottom: 1.5rem;
+    max-width: 560px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--purple);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  .end-screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+    padding: 2rem 1rem;
+  }
+
+  .end-screen.show { display: flex; }
+
+  .end-score {
+    font-family: 'Space Mono', monospace;
+    font-size: 4rem;
+    font-weight: 700;
+    color: var(--purple);
+    line-height: 1;
+  }
+
+  .end-label {
+    font-size: 1rem;
+    color: var(--muted);
+  }
+
+  .end-message {
+    font-size: 1.1rem;
+    color: var(--text);
+    font-weight: 500;
+    max-width: 360px;
+    line-height: 1.6;
+  }
+
+  .restart-btn {
+    background: var(--purple-dim);
+    border: 1.5px solid var(--purple);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 14px 36px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: background 0.15s;
+  }
+
+  .restart-btn:hover { background: var(--purple); }
+
+  .breakdown {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.88rem;
+  }
+
+  .breakdown-name { color: var(--text); font-weight: 500; }
+  .breakdown-result { font-family: 'Space Mono', monospace; font-size: 0.8rem; }
+  .breakdown-result.ok { color: var(--green); }
+  .breakdown-result.miss { color: var(--red); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="game-title">Transformation <span>Station</span></div>
+  <div class="subtitle">identify the transformation</div>
+</header>
+
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-label">Score</div>
+    <div class="stat-value purple" id="score">0</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Streak</div>
+    <div class="stat-value teal" id="streak">0</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Round</div>
+    <div class="stat-value" id="round-stat">1 / 10</div>
+  </div>
+</div>
+
+<div class="progress-bar"><div class="progress-fill" id="progress" style="width:0%"></div></div>
+
+<div class="game-card" id="game-card">
+  <div class="round-label" id="round-label">Round 1</div>
+  <div class="question-text" id="question-text">What transformation is shown?</div>
+  <canvas id="grid" width="480" height="340"></canvas>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#7c6ff7"></div> pre-image</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#2dd4bf"></div> image</div>
+  </div>
+  <div class="choices" id="choices"></div>
+  <div class="feedback-area">
+    <div class="feedback-msg" id="feedback"></div>
+    <div class="hint-text" id="hint"></div>
+    <button class="next-btn" id="next-btn">Next &rarr;</button>
+  </div>
+</div>
+
+<div class="end-screen" id="end-screen">
+  <div class="end-score" id="end-score">0</div>
+  <div class="end-label">out of 10</div>
+  <div class="end-message" id="end-message"></div>
+  <div class="breakdown" id="breakdown"></div>
+  <button class="restart-btn" onclick="restart()">Play again</button>
+</div>
+
+<script>
+const RANGE = 6;
+const W = 480, H = 340;
+const MX = W / 2, MY = H / 2;
+const STEP_X = W / (2 * RANGE);
+const STEP_Y = H / (2 * RANGE);
+
+function gx(x) { return MX + x * STEP_X; }
+function gy(y) { return MY - y * STEP_Y; }
+
+function drawGrid(ctx) {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0f0f18';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = '#1e1e2e';
+  ctx.lineWidth = 1;
+  for (let i = -RANGE; i <= RANGE; i++) {
+    ctx.beginPath(); ctx.moveTo(gx(i), 0); ctx.lineTo(gx(i), H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, gy(i)); ctx.lineTo(W, gy(i)); ctx.stroke();
+  }
+
+  ctx.strokeStyle = '#2e2e44';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, MY); ctx.lineTo(W, MY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(MX, 0); ctx.lineTo(MX, H); ctx.stroke();
+
+  ctx.fillStyle = '#2e2e44';
+  ctx.beginPath(); ctx.moveTo(W-2, MY); ctx.lineTo(W-10, MY-5); ctx.lineTo(W-10, MY+5); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(MX, 2); ctx.lineTo(MX-5, 10); ctx.lineTo(MX+5, 10); ctx.fill();
+
+  ctx.font = '11px "Space Mono", monospace';
+  ctx.fillStyle = '#3a3a55';
+  ctx.textAlign = 'center';
+  for (let i = -RANGE; i <= RANGE; i++) {
+    if (i === 0) continue;
+    ctx.fillText(String(i), gx(i), MY + 14);
+    ctx.textAlign = 'right';
+    ctx.fillText(String(-i), MX - 5, gy(i) + 4);
+    ctx.textAlign = 'center';
+  }
+  ctx.fillStyle = '#4a4a6a';
+  ctx.fillText('x', W - 8, MY - 8);
+  ctx.fillText('y', MX + 12, 10);
+}
+
+function drawShape(ctx, pts, color, alpha, label) {
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color + '33';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(gx(pts[0][0]), gy(pts[0][1]));
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(gx(pts[i][0]), gy(pts[i][1]));
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+  const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+  ctx.globalAlpha = alpha * 0.9;
+  ctx.font = 'bold 13px "Space Mono", monospace';
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.fillText(label, gx(cx), gy(cy) + 5);
+  ctx.globalAlpha = 1;
+}
+
+function applyTransform(pts, type, params) {
+  return pts.map(([x, y]) => {
+    if (type === 'translation') return [x + params.dx, y + params.dy];
+    if (type === 'reflection_x') return [x, -y];
+    if (type === 'reflection_y') return [-x, y];
+    if (type === 'reflection_xy') return [y, x];
+    if (type === 'rotation_90cw') return [y, -x];
+    if (type === 'rotation_90ccw') return [-y, x];
+    if (type === 'rotation_180') return [-x, -y];
+    if (type === 'dilation') return [x * params.k, y * params.k];
+    return [x, y];
+  });
+}
+
+const QUESTIONS = [
+  {
+    shape: [[1,1],[3,1],[2,3]],
+    type: 'translation', params: { dx: -4, dy: -2 },
+    question: 'The purple triangle moved to the teal position. Which transformation was applied?',
+    answer: 'Translation',
+    choices: ['Translation','Reflection over x-axis','Rotation 90° CW','Dilation'],
+    hint: 'Every point moved the same distance in the same direction. The shape and size are unchanged — that\'s the signature of a translation.'
+  },
+  {
+    shape: [[1,1],[4,1],[4,3],[1,3]],
+    type: 'reflection_x', params: {},
+    question: 'The purple rectangle was transformed to produce the teal image. What transformation occurred?',
+    answer: 'Reflection over x-axis',
+    choices: ['Translation','Reflection over x-axis','Rotation 180°','Dilation'],
+    hint: 'The shape flipped across the x-axis. Each y-coordinate changed sign: (x, y) → (x, −y). The shape stayed the same size and distance from the axis.'
+  },
+  {
+    shape: [[1,1],[3,2],[2,4]],
+    type: 'rotation_90cw', params: {},
+    question: 'The purple triangle was rotated to form the teal triangle. What type of rotation was applied?',
+    answer: 'Rotation 90° CW',
+    choices: ['Rotation 90° CCW','Rotation 90° CW','Rotation 180°','Reflection over y-axis'],
+    hint: 'For a 90° clockwise rotation: (x, y) → (y, −x). Notice the shape turned right around the origin. Check a corner point to confirm the direction.'
+  },
+  {
+    shape: [[-3,1],[-1,1],[-2,3]],
+    type: 'reflection_y', params: {},
+    question: 'The purple triangle flipped to become the teal triangle. What transformation is shown?',
+    answer: 'Reflection over y-axis',
+    choices: ['Reflection over x-axis','Translation','Reflection over y-axis','Rotation 90° CW'],
+    hint: 'The shape flipped across the y-axis. Each x-coordinate changed sign: (x, y) → (−x, y). The figure is a mirror image across the vertical axis.'
+  },
+  {
+    shape: [[1,1],[3,1],[3,3],[1,3]],
+    type: 'dilation', params: { k: 0.5 },
+    question: 'The purple square was transformed to produce the smaller teal square. What happened?',
+    answer: 'Dilation (scale factor ½)',
+    choices: ['Translation','Reflection over x-axis','Rotation 180°','Dilation (scale factor ½)'],
+    hint: 'The shape got smaller but kept the same proportions. A dilation multiplies every coordinate by a scale factor: (x, y) → (kx, ky). Here k = ½.'
+  },
+  {
+    shape: [[1,2],[3,2],[2,4]],
+    type: 'rotation_180', params: {},
+    question: 'The purple triangle transformed into the teal triangle. Which rotation was applied?',
+    answer: 'Rotation 180°',
+    choices: ['Rotation 90° CW','Reflection over x-axis','Rotation 180°','Translation'],
+    hint: 'Every point went to the opposite side of the origin: (x, y) → (−x, −y). A 180° rotation always puts the image directly opposite the pre-image through the origin.'
+  },
+  {
+    shape: [[2,1],[4,1],[3,3]],
+    type: 'translation', params: { dx: -5, dy: 1 },
+    question: 'The purple triangle slid to a new position to form the teal triangle. What transformation is this?',
+    answer: 'Translation',
+    choices: ['Reflection over y-axis','Dilation','Rotation 90° CCW','Translation'],
+    hint: 'The shape didn\'t flip, rotate, or resize — it just slid. That\'s always a translation. You can describe it as a rule: (x, y) → (x+dx, y+dy).'
+  },
+  {
+    shape: [[1,1],[3,1],[3,2],[1,2]],
+    type: 'rotation_90ccw', params: {},
+    question: 'The purple rectangle rotated to become the teal rectangle. What rotation was applied?',
+    answer: 'Rotation 90° CCW',
+    choices: ['Rotation 90° CW','Rotation 90° CCW','Reflection over x-axis','Dilation'],
+    hint: 'For 90° counter-clockwise: (x, y) → (−y, x). The shape turned left around the origin. Compare a corner to check: (1,1) → (−1, 1) — that confirms CCW.'
+  },
+  {
+    shape: [[-2,1],[0,1],[-1,3]],
+    type: 'dilation', params: { k: 2 },
+    question: 'The purple triangle grew into the teal triangle. What transformation was applied?',
+    answer: 'Dilation (scale factor 2)',
+    choices: ['Translation','Rotation 180°','Reflection over y-axis','Dilation (scale factor 2)'],
+    hint: 'The shape doubled in size around the origin. A dilation with k=2 maps (x, y) → (2x, 2y). The shape is similar to the original but not congruent.'
+  },
+  {
+    shape: [[1,1],[3,1],[3,3]],
+    type: 'reflection_xy', params: {},
+    question: 'The purple triangle reflected to become the teal triangle. Over which line was it reflected?',
+    answer: 'Reflection over y = x',
+    choices: ['Reflection over x-axis','Reflection over y-axis','Reflection over y = x','Rotation 90° CW'],
+    hint: 'Points swapped coordinates: (x, y) → (y, x). This is a reflection over the line y = x, the diagonal line through the origin at 45°.'
+  },
+];
+
+let questions = [];
+let current = 0;
+let score = 0;
+let streak = 0;
+let results = [];
+let answered = false;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function loadQuestion() {
+  answered = false;
+  const q = questions[current];
+  const canvas = document.getElementById('grid');
+  const ctx = canvas.getContext('2d');
+
+  drawGrid(ctx);
+
+  const image = applyTransform(q.shape, q.type, q.params);
+
+  if (q.type === 'reflection_xy') {
+    ctx.strokeStyle = '#3a3a66';
+    ctx.setLineDash([6, 4]);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const ext = RANGE;
+    ctx.moveTo(gx(-ext), gy(-ext));
+    ctx.lineTo(gx(ext), gy(ext));
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  drawShape(ctx, q.shape, '#7c6ff7', 0.9, 'P');
+  drawShape(ctx, image, '#2dd4bf', 0.9, "P'");
+
+  document.getElementById('question-text').textContent = q.question;
+  document.getElementById('round-label').textContent = `Round ${current + 1}`;
+  document.getElementById('round-stat').textContent = `${current + 1} / ${questions.length}`;
+  document.getElementById('progress').style.width = `${(current / questions.length) * 100}%`;
+
+  const shuffledChoices = shuffle(q.choices);
+  const choicesEl = document.getElementById('choices');
+  choicesEl.innerHTML = '';
+  shuffledChoices.forEach(choice => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = choice;
+    btn.onclick = () => handleAnswer(choice, btn, shuffledChoices);
+    choicesEl.appendChild(btn);
+  });
+
+  document.getElementById('feedback').className = 'feedback-msg';
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('hint').className = 'hint-text';
+  document.getElementById('hint').textContent = '';
+  document.getElementById('next-btn').className = 'next-btn';
+}
+
+function handleAnswer(choice, btn, allChoices) {
+  if (answered) return;
+  answered = true;
+
+  const q = questions[current];
+  const correct = choice === q.answer;
+
+  const allBtns = document.querySelectorAll('.choice-btn');
+  allBtns.forEach(b => {
+    b.disabled = true;
+    if (b.textContent === q.answer) b.classList.add(correct ? 'correct' : 'reveal');
+  });
+  if (!correct) btn.classList.add('wrong');
+
+  const fb = document.getElementById('feedback');
+  const hint = document.getElementById('hint');
+
+  if (correct) {
+    score++;
+    streak++;
+    document.getElementById('score').textContent = score;
+    document.getElementById('streak').textContent = streak;
+    fb.textContent = streak >= 3 ? `Correct! ${streak} in a row!` : 'Correct!';
+    fb.className = 'feedback-msg correct show';
+  } else {
+    streak = 0;
+    document.getElementById('streak').textContent = 0;
+    fb.textContent = `Not quite — the answer is ${q.answer}.`;
+    fb.className = 'feedback-msg wrong show';
+  }
+
+  hint.textContent = q.hint;
+  hint.className = 'hint-text show';
+  document.getElementById('next-btn').className = 'next-btn visible';
+
+  results.push({ question: q.question, correct, answer: q.answer, chosen: choice });
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= questions.length) {
+    showEnd();
+  } else {
+    loadQuestion();
+  }
+}
+
+function showEnd() {
+  document.getElementById('game-card').style.display = 'none';
+  document.getElementById('progress').style.width = '100%';
+
+  const end = document.getElementById('end-screen');
+  end.className = 'end-screen show';
+  document.getElementById('end-score').textContent = score;
+
+  const pct = score / questions.length;
+  let msg = '';
+  if (pct === 1) msg = 'Perfect score! You nailed every transformation.';
+  else if (pct >= 0.8) msg = 'Great work! You have a strong grasp of transformations.';
+  else if (pct >= 0.6) msg = 'Good effort. Review the hints for the ones you missed.';
+  else msg = 'Keep practicing — transformations take time to click. Review the key rules below.';
+  document.getElementById('end-message').textContent = msg;
+
+  const bd = document.getElementById('breakdown');
+  bd.innerHTML = '';
+  results.forEach((r, i) => {
+    const row = document.createElement('div');
+    row.className = 'breakdown-row';
+    row.innerHTML = `<span class="breakdown-name">Q${i+1}: ${r.answer}</span>
+      <span class="breakdown-result ${r.correct ? 'ok' : 'miss'}">${r.correct ? 'correct' : 'missed'}</span>`;
+    bd.appendChild(row);
+  });
+}
+
+function restart() {
+  score = 0; streak = 0; current = 0; results = [];
+  document.getElementById('score').textContent = 0;
+  document.getElementById('streak').textContent = 0;
+  document.getElementById('end-screen').className = 'end-screen';
+  document.getElementById('game-card').style.display = 'block';
+  questions = shuffle(QUESTIONS);
+  loadQuestion();
+}
+
+document.getElementById('next-btn').addEventListener('click', nextQuestion);
+
+questions = shuffle(QUESTIONS);
+loadQuestion();
+</script>
+</body>
+</html>
